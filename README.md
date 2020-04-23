@@ -8,3 +8,7 @@ Python ile H264 codec ile encode edilmiş RTSP akışlarını kaydedebilir, izle
 4. Bu dosyayı VLC ile oynatabilirsiniz.
 
 # Yardım
+
+Projenin detaylı anlatımı ve yardım için yazımızı okuyabilirsiniz.
+
+=> https://kerteriz.net/python-ile-rtsp-akisini-kaydetme-ve-izleme/
