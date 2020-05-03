@@ -7,6 +7,9 @@ Python ile H264 codec ile encode edilmiş RTSP akışlarını kaydedebilir, izle
 3. Çalıştırdığınız dizinde `fname` değişkeninde belirttiğiniz dosya oluşacak.
 4. Bu dosyayı VLC ile oynatabilirsiniz.
 
+# Not
+1. Antivirüs programı veya firewall kullanıyorsanız paket kaybı yaşayabilirsiniz. 
+
 # Yardım
 
 Projenin detaylı anlatımı ve yardım için yazımızı okuyabilirsiniz.
