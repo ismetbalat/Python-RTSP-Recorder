@@ -2,7 +2,14 @@
 
 import bitstring, string
 
+
 def analiz(UDPpacket):
+
+    # İstatistikler
+    count_sps = 0
+    count_pps = 0
+    count_unit = 0
+
 
     hex_veri = bitstring.BitArray(bytes=UDPpacket)
     startbytes = b"\x00\x00\x00\x01"
@@ -219,12 +226,10 @@ def analiz(UDPpacket):
     print("first three bits together :",nlu0)
 
 
-
-
+    
 
     # Tipe göre verinin türünü ayırt edeceğiz
-    if (typ == 7 or typ == 8):
-        print("+"*100,typ)
+    if (typ >= 1 and typ <= 23):
         # Tip 7 veya 8 ise bu paket SPS veya PPS paketidir.
         # Bu paket resolution, vb. meta bilgiler sunar
         # İlk paketi tamamen alabiliriz
@@ -232,9 +237,14 @@ def analiz(UDPpacket):
         # https://www.cardinalpeak.com/the-h-264-sequence-parameter-set/
         if (typ==7):
             print(">>>>> SPS packet")
-        else:
+            count_sps += 1
+        elif (typ==7):
             print(">>>>> PPS packet")
-        return startbytes+UDPpacket[lc:]
+            count_pps += 1
+        else:
+            print(">>>>> nal unit")
+            count_unit += 1
+        return startbytes+UDPpacket[lc:],[count_sps,count_pps,count_unit],1
         # Burada NAL başlangıç dizisi "startbytes" a  "First byte" ı eklediğimize dikkat edin.  
 
 
@@ -287,7 +297,7 @@ def analiz(UDPpacket):
 
 
     # Other Bytes yani "Video Fragment Data" alınır
-    if (typ==28):                               # Bu program şimdilik sadece "Type" = 28, i.e. "FU-A" için çalışıyor.  
-        return head+UDPpacket[lc:]
-    else:
-        return 0                                # Şimdilik bunun için üzgünüz :(
+    if (typ==28):                                                       # Bu program şimdilik sadece "Type" = 28, i.e. "FU-A" için çalışıyor.  
+        return head+UDPpacket[lc:],[count_sps,count_pps,count_unit],0
+    else:                                                               # Şimdilik bunun için üzgünüz :(
+        return 0,[count_sps,count_pps,count_unit],0                 
