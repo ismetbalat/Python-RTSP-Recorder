@@ -1,4 +1,5 @@
 import socket, sys, bitstring, string, base64
+import threading, queue
 import auth
 import handshake
 import packetHandler
@@ -20,6 +21,11 @@ seq = 1                                                     # Handshake esnasın
 timeout = 3                                                 # Sunucudan cevap için beklenen süre. (Zaman Aşımı)
 # *******************************************************************************************************************
 
+
+
+count_sps = 0
+count_pps = 0
+count_unit = 0
 
 
 
@@ -159,6 +165,9 @@ sprop = sprop.split(',')
 sps = base64.decodebytes(sprop[0].encode())
 pps = base64.decodebytes(sprop[1].encode())
 
+count_sps += 1
+count_pps += 1
+
 print("*"*30)
 print(sps)
 print(pps)
@@ -272,9 +281,6 @@ print(cevap)
 
 
 
-
-
-
 # ************************ Socket Başlatıyoruz ***********************************************************************
 #
 # Bu socket sunucudan gelen UDP paketlerini dinleyecek
@@ -294,35 +300,81 @@ except socket.timeout:
 
 
 
+f = open(fname,'wb')
+
+# Dosyamızın en başına SPS ve PPS verilerini ekleyelim
+startbytes = b"\x00\x00\x00\x01"
+f.write(startbytes+sps)
+f.write(startbytes+pps)   
+
+
+
+
+
 # ************************ Gelen UDP paketlerini analiz ederek dosyaya kaydediyoruz *********************************
 #
-
-with open(fname,'wb') as f:
-
-    # Dosyamızın en başına SPS ve PPS verilerini ekleyelim
-    startbytes = b"\x00\x00\x00\x01"
-    f.write(startbytes+sps)
-    f.write(startbytes+pps)
-
-    # Artık geri kalan verileri dosyanın devamına yazabiliriz
-    for i in range(rn):
-        UDPpaketi = s1.recv(bufLen)    
-
+nalunitgeldi = 0
+q = queue.Queue()
+def worker():
+    while True:
+        item = q.get()    
+        global nalunitgeldi
+        global count_sps, count_pps, count_unit
+        
         print("-"*30)
-        sonuc = packetHandler.analiz(UDPpaketi)
+        sonuc,istatistik,nalunit = packetHandler.analiz(item)
         print("-"*30)
 
 
+        # ilk olarak nal unit gelmesini bekle
+        if(nalunit == 1):
+            nalunitgeldi = 1
 
-        if sonuc is not 0:
-            print("capture",len(UDPpaketi),"bytes")
-            print("dumping",len(sonuc),"bytes")
-            f.write(sonuc)
-        else:
-            print("!"*30,"Bilinmeyen veri tipi")
+        # başlangıç nal unit ile yapıldıysa paketler yazılabilir
+        if(nalunitgeldi == 1):
+            if sonuc is not 0:
+                print("capture",len(item),"bytes")
+                print("dumping",len(sonuc),"bytes")  
+
+                count_sps += istatistik[0]
+                count_pps += istatistik[1]   
+                count_unit += istatistik[2]         
+
+                f.write(sonuc)
+            else:
+                print("!"*30,"Bilinmeyen veri tipi")
+
+
+        
+        q.task_done()
+#
+# *******************************************************************************************************************
 
 
 
+# thread worker çalıştırıyoruz
+threading.Thread(target=worker, daemon=True).start()
+
+
+
+# Artık geri kalan verileri dosyanın devamına yazabiliriz
+for i in range(rn):           
+        
+    UDPpaketi,sender = s1.recvfrom(bufLen) 
+    q.put(UDPpaketi)
+        
+
+q.join()
+
+
+print("-"*30)
+print("sps",count_sps)
+print("pps",count_pps)
+print("other unit",count_unit)
+print("-"*30)
+
+
+f.close()
 s.close()
 s1.close()
 #
